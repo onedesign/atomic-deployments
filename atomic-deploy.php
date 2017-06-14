@@ -353,11 +353,16 @@ class Deployer {
         if ($revisionsToKeep > 0) {
             $revisionsDir = $this->deployPath . DIRECTORY_SEPARATOR . $this->directories['revisions'];
 
-            // Never delete the most recent revision
-            $revisionsToKeep += 1;
+            // Never delete the most recent revision and start index after listing of the last revision we want to keep
+            // e.g.
+            //  revision-1/
+            //  revision-2/
+            //  revision-3/ <- --revisions-to-keep=1 will remove starting with this line
+            //  revision-4/ <- --revisions-to-keep=2 will remove starting with this line
+            $rmIndex = $revisionsToKeep + 2;
 
             // ls 1 directory by time modified | collect all dirs from ${revisionsToKeep} line of output | translate newlines and nulls | remove all those dirs
-            exec("ls -1dtp ${revisionsDir}/** | tail -n +${revisionsToKeep} | tr " . '\'\n\' \'\0\'' ." | xargs -0 rm -rf --",
+            exec("ls -1dtp ${revisionsDir}/** | tail -n +${rmIndex} | tr " . '\'\n\' \'\0\'' ." | xargs -0 rm -rf --",
                 $output, $returnVar);
 
             if ($returnVar > 0) {
