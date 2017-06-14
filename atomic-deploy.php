@@ -353,7 +353,11 @@ class Deployer {
         if ($revisionsToKeep > 0) {
             $revisionsDir = $this->deployPath . DIRECTORY_SEPARATOR . $this->directories['revisions'];
 
-            exec("ls -tp $revisionsDir/ | grep '/$' | tail -n +$revisionsToKeep | tr " . '\'\n\' \'\0\'' ." | xargs -0 rm -rf --",
+            // Never delete the most recent revision
+            $revisionsToKeep += 1;
+
+            // ls 1 directory by time modified | collect all dirs from ${revisionsToKeep} line of output | translate newlines and nulls | remove all those dirs
+            exec("ls -1dtp ${revisionsDir}/** | tail -n +${revisionsToKeep} | tr " . '\'\n\' \'\0\'' ." | xargs -0 rm -rf --",
                 $output, $returnVar);
 
             if ($returnVar > 0) {

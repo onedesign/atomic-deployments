@@ -33,7 +33,7 @@ curl -sS https://raw.githubusercontent.com/onedesign/atomic-deployments/master/a
 - `--revision` (**required**) accepts a string ID for this revision
 - `--deploy-dir` accepts a base directory for deployments (default: current working directory)
 - `--deploy-cache-dir` accepts a target cache directory (default: `deploy-cache` within deploy-dir)
-- `--revisions-to-keep` number of old revisions to keep (default: `20`)
+- `--revisions-to-keep` number of old revisions to keep in addition to the current revision (default: `20`)
 - `--symlinks` a JSON hash of symbolic links to be created in the revision directory (default: `{}`)
 - `--help` prints help and usage instructions
 - `--ansi` forces ANSI color output
