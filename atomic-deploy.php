@@ -3,7 +3,7 @@
 /*
  */
 
-process(is_array($argv) ? $argv : array());
+process(is_array($argv) ? $argv : []);
 
 /**
  * processes the installer
@@ -13,13 +13,12 @@ function process($argv)
     // Determine ANSI output from --ansi and --no-ansi flags
     setUseAnsi($argv);
 
-    if (in_array('--help', $argv)) {
+    if (in_array('--help', $argv, true)) {
         displayHelp();
         exit(0);
     }
 
-    $help       = in_array('--help', $argv);
-    $quiet      = in_array('--quiet', $argv);
+    $quiet = in_array('--quiet', $argv, true);
     $deployDir = getOptValue('--deploy-dir', $argv, getcwd());
     $deployCacheDir = getOptValue('--deploy-cache-dir', $argv, 'deploy-cache');
     $revision = getOptValue('--revision', $argv, false);
@@ -31,7 +30,7 @@ function process($argv)
     }
 
     $deployer = new Deployer($quiet);
-    if ($deployer->run($deployDir, $deployCacheDir, $revision, $revisionsToKeep, json_decode($symLinks))) {
+    if ($deployer->run($deployDir, $deployCacheDir, $revision, $revisionsToKeep, json_decode($symLinks, true))) {
         exit(0);
     }
 
@@ -51,8 +50,8 @@ Options
 --ansi                      force ANSI color output
 --no-ansi                   disable ANSI color output
 --quiet                     do not output unimportant messages
---deploy-dir="..."          accepts a base directory for deployments
---deploy-cache-dir="..."    accepts a target cache directory
+--deploy-dir="..."          accepts a base directory for deployments (defaults to getcwd())
+--deploy-cache-dir="..."    accepts a target cache directory (defaults to deploy-cache)
 --revision                  a unique id for this revision
 --revisions-to-keep         number of old revisions to keep (default 20)
 --symlinks                  a JSON hash of symlinks to be created in the revision (format: {"target/":"linkname"})
@@ -69,16 +68,16 @@ EOF;
 function setUseAnsi($argv)
 {
     // --no-ansi wins over --ansi
-    if (in_array('--no-ansi', $argv)) {
+    if (in_array('--no-ansi', $argv, true)) {
         define('USE_ANSI', false);
-    } elseif (in_array('--ansi', $argv)) {
+    } elseif (in_array('--ansi', $argv, true)) {
         define('USE_ANSI', true);
     } else {
         // On Windows, default to no ANSI, except in ANSICON and ConEmu.
         // Everywhere else, default to ANSI if stdout is a terminal.
         define(
             'USE_ANSI',
-            (DIRECTORY_SEPARATOR == '\\')
+            (DIRECTORY_SEPARATOR === '\\')
                 ? (false !== getenv('ANSICON') || 'ON' === getenv('ConEmuANSI'))
                 : (function_exists('posix_isatty') && posix_isatty(1))
         );
@@ -101,11 +100,11 @@ function getOptValue($opt, $argv, $default)
     foreach ($argv as $key => $value) {
         $next = $key + 1;
         if (0 === strpos($value, $opt)) {
-            if ($optLength === strlen($value) && isset($argv[$next])) {
+            if (isset($argv[$next]) && $optLength === strlen($value)) {
                 return trim($argv[$next]);
-            } else {
-                return trim(substr($value, $optLength + 1));
             }
+
+            return trim(substr($value, $optLength + 1));
         }
     }
 
@@ -115,10 +114,11 @@ function getOptValue($opt, $argv, $default)
 /**
  * Checks that user-supplied params are valid
  *
- * @param mixed $deployDir The required deployment directory
- * @param mixed $deployCacheDir The required deployment cache directory
- * @param mixed $revision A unique ID for this revision
- * @param mixed $revisionsToKeep The number of revisions to keep after deploying 
+ * @param string $deployDir The required deployment directory
+ * @param string $deployCacheDir The required deployment cache directory
+ * @param string $revision A unique ID for this revision
+ * @param int $revisionsToKeep The number of revisions to keep after deploying
+ * @param string $symLinks JSON string of symlinks to create
  *
  * @return bool True if the supplied params are okay
  */
@@ -137,17 +137,17 @@ function checkParams($deployDir, $deployCacheDir, $revision, $revisionsToKeep, $
     }
 
     if (false === $revision || empty($revision)) {
-        out("A revision must be specified.", 'info');
+        out('A revision must be specified.', 'info');
         $result = false;
     }
 
     if (false !== $revisionsToKeep && (!is_int((integer)$revisionsToKeep) || $revisionsToKeep <= 0)) {
-        out("Number of revisions to keep must be a number greater than zero.", 'info');
+        out('Number of revisions to keep must be a number greater than zero.', 'info');
         $result = false;
     }
 
-    if (false !== $symLinks && null === json_decode($symLinks)) {
-        out("Symlinks parameter is not valid JSON.", 'info');
+    if (false !== $symLinks && null === json_decode($symLinks, true)) {
+        out('Symlinks parameter is not valid JSON.', 'info');
         $result = false;
     }
 
@@ -156,14 +156,18 @@ function checkParams($deployDir, $deployCacheDir, $revision, $revisionsToKeep, $
 
 /**
  * colorize output
+ *
+ * @param string $text Text to output.
+ * @param null $color Color to use.
+ * @param bool $newLine Separate with newline?
  */
 function out($text, $color = null, $newLine = true)
 {
-    $styles = array(
+    $styles = [
         'success' => "\033[0;32m%s\033[0m",
         'error' => "\033[31;31m%s\033[0m",
         'info' => "\033[33;33m%s\033[0m"
-    );
+    ];
 
     $format = '%s';
 
@@ -178,18 +182,24 @@ function out($text, $color = null, $newLine = true)
     printf($format, $text);
 }
 
-class Deployer {
+/**
+ * Class Deployer
+ *
+ * Class responsible for deployment
+ */
+class Deployer
+{
 
     private $quiet;
     private $deployPath;
     private $revisionPath;
     private $errHandler;
 
-    private $directories = array(
+    private $directories = [
         'revisions' => 'revisions',
         'shared' => 'shared',
         'config' => 'shared/config',
-        );
+    ];
 
     /**
      * Constructor - must not do anything that throws an exception
@@ -205,9 +215,18 @@ class Deployer {
     }
 
     /**
-     * 
+     * Runs the script
+     *
+     * @param string $deployDir Working directory for deploy.
+     * @param string $deployCacheDir Deploy cache directory.
+     * @param string $revision Name of revision.
+     * @param int $revisionsToKeep Number of revisions to keep.
+     * @param string $symLinks JSON string of symlinks to create
+     * @return bool If deployment was successful or not.
+     * @throws Exception
      */
-    public function run($deployDir, $deployCacheDir, $revision, $revisionsToKeep, $symLinks) {
+    public function run($deployDir, $deployCacheDir, $revision, $revisionsToKeep, $symLinks)
+    {
         try {
             out('Creating atomic deployment directories...');
             $this->initDirectories($deployDir);
@@ -242,20 +261,22 @@ class Deployer {
             }
             out($e->getMessage(), 'error');
         }
-        return $result;   
+        return $result;
     }
 
     /**
-     * [initDirectories description]
-     * @param  string $deployDir Base deployment directory
+     * Initializes directories
+     *
+     * @param string $deployDir Base deployment directory
      * @return void
      * @throws RuntimeException If the deploy directory is not writable or dirs can't be created
      */
-    public function initDirectories($deployDir) {
+    final public function initDirectories($deployDir)
+    {
         $this->deployPath = (is_dir($deployDir) ? rtrim($deployDir, '/') : '');
 
         if (!is_writeable($deployDir)) {
-            throw new RuntimeException('The deploy directory "'.$deployDir.'" is not writable');
+            throw new RuntimeException('The deploy directory "' . $deployDir . '" is not writable');
         }
 
         if (!is_dir($this->directories['revisions']) && !mkdir($this->directories['revisions'])) {
@@ -273,15 +294,17 @@ class Deployer {
 
     /**
      * Creates a revision directory under the revisions/ directory
+     *
      * @throws RuntimeException If directories can't be created
      */
-    public function createRevisionDir($revision) {
-        $this->revisionPath = $this->deployPath . DIRECTORY_SEPARATOR . $this->directories['revisions']. DIRECTORY_SEPARATOR . $revision;
+    final public function createRevisionDir($revision)
+    {
+        $this->revisionPath = $this->deployPath . DIRECTORY_SEPARATOR . $this->directories['revisions'] . DIRECTORY_SEPARATOR . $revision;
         $this->revisionPath = rtrim($this->revisionPath, DIRECTORY_SEPARATOR);
 
         // Check to see if this revision was already deployed
         if (is_dir(realpath($this->revisionPath))) {
-            $this->revisionPath = $this->revisionPath . '-' . time();
+            $this->revisionPath .= '-' . time();
         }
 
         if (!is_dir($this->revisionPath) && !mkdir($this->revisionPath)) {
@@ -289,20 +312,21 @@ class Deployer {
         }
 
         if (!is_writeable($this->revisionPath)) {
-            throw new RuntimeException('The revision directory "'.$this->revisionPath.'" is not writable');
+            throw new RuntimeException('The revision directory "' . $this->revisionPath . '" is not writable');
         }
     }
 
     /**
      * Copies the deploy-cache to the revision directory
      */
-    public function copyCacheToRevision($deployCacheDir) {
+    final public function copyCacheToRevision($deployCacheDir)
+    {
         $this->errHandler->start();
 
         exec("cp -a $deployCacheDir/. $this->revisionPath", $output, $returnVar);
 
         if ($returnVar > 0) {
-            throw new RuntimeException('Could not copy deploy cache to revision directory: ' . $output); 
+            throw new RuntimeException('Could not copy deploy cache to revision directory: ' . $output);
         }
 
         $this->errHandler->stop();
@@ -311,10 +335,11 @@ class Deployer {
     /**
      * Creates defined symbolic links
      */
-    public function createSymLinks($symLinks) {
+    final public function createSymLinks($symLinks)
+    {
         $this->errHandler->start();
 
-        foreach($symLinks as $target => $linkName) {
+        foreach ($symLinks as $target => $linkName) {
             $t = $this->deployPath . DIRECTORY_SEPARATOR . $target;
             $l = $this->revisionPath . DIRECTORY_SEPARATOR . $linkName;
 
@@ -331,7 +356,8 @@ class Deployer {
     /**
      * Sets the deployed revision as `current`
      */
-    public function linkCurrentRevision() {
+    final public function linkCurrentRevision()
+    {
         $this->errHandler->start();
 
         $revisionTarget = $this->revisionPath;
@@ -341,15 +367,18 @@ class Deployer {
             $this->createSymLink($revisionTarget, $currentLink);
         } catch (Exception $e) {
             throw new RuntimeException("Could not create current symlink: " . $e->getMessage());
-        } 
+        }
 
         $this->errHandler->stop();
     }
 
     /**
      * Removes old revision directories
+     *
+     * @param int $revisionsToKeep Number of revisions to keep
      */
-    public function pruneOldRevisions($revisionsToKeep) {
+    final public function pruneOldRevisions($revisionsToKeep)
+    {
         if ($revisionsToKeep > 0) {
             $revisionsDir = $this->deployPath . DIRECTORY_SEPARATOR . $this->directories['revisions'];
 
@@ -362,7 +391,7 @@ class Deployer {
             $rmIndex = $revisionsToKeep + 2;
 
             // ls 1 directory by time modified | collect all dirs from ${revisionsToKeep} line of output | translate newlines and nulls | remove all those dirs
-            exec("ls -1dtp ${revisionsDir}/** | tail -n +${rmIndex} | tr " . '\'\n\' \'\0\'' ." | xargs -0 rm -rf --",
+            exec("ls -1dtp ${revisionsDir}/** | tail -n +${rmIndex} | tr " . '\'\n\' \'\0\'' . " | xargs -0 rm -rf --",
                 $output, $returnVar);
 
             if ($returnVar > 0) {
@@ -373,8 +402,12 @@ class Deployer {
 
     /**
      * Uses the system method `ln` to create a symlink
+     *
+     * @param string $target Path to target
+     * @param string $linkName Name of symlink
      */
-    protected function createSymLink($target, $linkName) {
+    protected function createSymLink($target, $linkName)
+    {
         exec("rm -rf $linkName && ln -sfn $target $linkName", $output, $returnVar);
 
         if ($returnVar > 0) {
@@ -387,7 +420,7 @@ class Deployer {
      *
      * @param bool $result If the installation succeeded
      */
-    protected function cleanUp($result)
+    final protected function cleanUp($result)
     {
         if (!$result) {
             // Output buffered errors
@@ -403,13 +436,13 @@ class Deployer {
      * Outputs unique errors when in quiet mode
      *
      */
-    protected function outputErrors()
+    final protected function outputErrors()
     {
         $errors = explode(PHP_EOL, ob_get_clean());
-        $shown = array();
+        $shown = [];
 
         foreach ($errors as $error) {
-            if ($error && !in_array($error, $shown)) {
+            if ($error && !in_array($error, $shown, true)) {
                 out($error, 'error');
                 $shown[] = $error;
             }
@@ -420,7 +453,7 @@ class Deployer {
      * Uninstalls newly-created files and directories on failure
      *
      */
-    protected function uninstall()
+    final protected function uninstall()
     {
         if ($this->revisionPath && is_dir($this->revisionPath)) {
             unlink($this->revisionPath);
@@ -436,10 +469,9 @@ class ErrorHandler
     /**
      * Handle php errors
      *
-     * @param mixed $code The error code
      * @param mixed $msg The error message
      */
-    public function handleError($code, $msg)
+    public function handleError($msg)
     {
         if ($this->message) {
             $this->message .= PHP_EOL;
@@ -455,7 +487,7 @@ class ErrorHandler
     public function start()
     {
         if (!$this->active) {
-            set_error_handler(array($this, 'handleError'));
+            set_error_handler([$this, 'handleError']);
             $this->active = true;
         }
         $this->message = '';
