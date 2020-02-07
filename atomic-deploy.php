@@ -136,6 +136,11 @@ function checkParams($deployDir, $deployCacheDir, $revision, $revisionsToKeep, $
         $result = false;
     }
 
+    if (false !== $deployCacheDir && !is_dir($deployCacheDir)) {
+        out("The deploy cache directory ({$deployCacheDir}) does not exist. Please create it to continue.", 'info');
+        $result = false;
+    }
+
     if (false === $revision || empty($revision)) {
         out('A revision must be specified.', 'info');
         $result = false;
@@ -344,6 +349,7 @@ class Deployer
     final public function copyCacheToRevision($deployCacheDir)
     {
         $this->errHandler->start();
+
 
         exec("cp -a $deployCacheDir/. $this->revisionPath", $output, $returnVar);
 
