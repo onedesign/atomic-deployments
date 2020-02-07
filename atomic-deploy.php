@@ -437,10 +437,12 @@ class Deployer
      */
     protected function createSymLink($target, $linkName)
     {
-        exec("rm -rf $linkName && ln -sfn $target $linkName", $output, $returnVar);
+        if (is_dir($linkName)) {
+            exec("rm -rf $linkName && ln -sfn $target $linkName", $output, $returnVar);
 
-        if ($returnVar > 0) {
-            throw new RuntimeException($output);
+            if ($returnVar > 0) {
+                throw new RuntimeException($output);
+            }
         }
     }
 
