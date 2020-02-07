@@ -21,8 +21,8 @@ function process($argv)
     $quiet = in_array('--quiet', $argv, true);
     $deployDir = getOptValue('--deploy-dir', $argv, getcwd());
     $deployCacheDir = getOptValue('--deploy-cache-dir', $argv, 'deploy-cache');
-    $revision = getOptValue('--revision', $argv, false);
-    $revisionsToKeep = getOptValue('--revisions-to-keep', $argv, 20);
+    $revision = getOptValue('--revision', $argv, bin2hex(random_bytes(8)));
+    $revisionsToKeep = getOptValue('--revisions-to-keep', $argv, 10);
     $symLinks = getOptValue('--symlinks', $argv, '{}');
 
     if (!checkParams($deployDir, $deployCacheDir, $revision, $revisionsToKeep, $symLinks)) {
@@ -111,6 +111,11 @@ function getOptValue($opt, $argv, $default)
     return $default;
 }
 
+function buildPath($segments)
+{
+    return rtrim(implode(DIRECTORY_SEPARATOR, $segments), DIRECTORY_SEPARATOR);
+}
+
 /**
  * Checks that user-supplied params are valid
  *
@@ -128,11 +133,6 @@ function checkParams($deployDir, $deployCacheDir, $revision, $revisionsToKeep, $
 
     if (false !== $deployDir && !is_dir($deployDir)) {
         out("The defined deploy dir ({$deployDir}) does not exist.", 'info');
-        $result = false;
-    }
-
-    if (false !== $deployCacheDir && !is_dir($deployCacheDir)) {
-        out("The defined deploy cache dir ({$deployCacheDir}) does not exist.", 'info');
         $result = false;
     }
 
@@ -192,7 +192,10 @@ class Deployer
 
     private $quiet;
     private $deployPath;
+    private $revisionDir;
     private $revisionPath;
+    private $sharedDir;
+    private $configDir;
     private $errHandler;
 
     private $directories = [
@@ -227,6 +230,7 @@ class Deployer
      */
     public function run($deployDir, $deployCacheDir, $revision, $revisionsToKeep, $symLinks)
     {
+        $this->deployPath = $deployDir;
         try {
             out('Creating atomic deployment directories...');
             $this->initDirectories($deployDir);
@@ -235,7 +239,7 @@ class Deployer
             $this->createRevisionDir($revision);
 
             out('Copying deploy-cache to new revision directory...');
-            $this->copyCacheToRevision($deployCacheDir);
+            $this->copyCacheToRevision($this->deployPath([$deployCacheDir]));
 
             out('Creating symlinks within new revision directory...');
             $this->createSymLinks($symLinks);
@@ -265,6 +269,19 @@ class Deployer
     }
 
     /**
+     * Builds a path relative to the deployment directory
+     *
+     * @param array $segments Path segments
+     * @return string final path
+     */
+    public function deployPath($segments)
+    {
+        return buildPath(array_merge([
+            $this->deployPath,
+        ], $segments));
+    }
+
+    /**
      * Initializes directories
      *
      * @param string $deployDir Base deployment directory
@@ -274,20 +291,23 @@ class Deployer
     final public function initDirectories($deployDir)
     {
         $this->deployPath = (is_dir($deployDir) ? rtrim($deployDir, '/') : '');
+        $this->revisionDir = $this->deployPath([$this->directories['revisions']]);
+        $this->sharedDir = $this->deployPath([$this->directories['shared']]);
+        $this->configDir = $this->deployPath([$this->directories['config']]);
 
-        if (!is_writeable($deployDir)) {
+        if (!is_writable($deployDir)) {
             throw new RuntimeException('The deploy directory "' . $deployDir . '" is not writable');
         }
 
-        if (!is_dir($this->directories['revisions']) && !mkdir($this->directories['revisions'])) {
+        if (!is_dir($this->revisionDir) && !mkdir($concurrentDirectory = $this->revisionDir) && !is_dir($concurrentDirectory)) {
             throw new RuntimeException('Could not create revisions directory.');
         }
 
-        if (!is_dir($this->directories['shared']) && !mkdir($this->directories['shared'])) {
+        if (!is_dir($this->sharedDir) && !mkdir($concurrentDirectory = $this->sharedDir) && !is_dir($concurrentDirectory)) {
             throw new RuntimeException('Could not create shared directory.');
         }
 
-        if (!is_dir($this->directories['config']) && !mkdir($this->directories['config'])) {
+        if (!is_dir($this->configDir) && !mkdir($concurrentDirectory = $this->configDir) && !is_dir($concurrentDirectory)) {
             throw new RuntimeException('Could not create config directory.');
         }
     }
@@ -299,19 +319,21 @@ class Deployer
      */
     final public function createRevisionDir($revision)
     {
-        $this->revisionPath = $this->deployPath . DIRECTORY_SEPARATOR . $this->directories['revisions'] . DIRECTORY_SEPARATOR . $revision;
-        $this->revisionPath = rtrim($this->revisionPath, DIRECTORY_SEPARATOR);
+        $this->revisionPath = buildPath([
+            $this->revisionDir,
+            $revision
+        ]);
 
         // Check to see if this revision was already deployed
         if (is_dir(realpath($this->revisionPath))) {
             $this->revisionPath .= '-' . time();
         }
 
-        if (!is_dir($this->revisionPath) && !mkdir($this->revisionPath)) {
+        if (!is_dir($this->revisionPath) && !mkdir($concurrentDirectory = $this->revisionPath, 0777, true) && !is_dir($concurrentDirectory)) {
             throw new RuntimeException('Could not create revision directory: ' . $this->revisionPath);
         }
 
-        if (!is_writeable($this->revisionPath)) {
+        if (!is_writable($this->revisionPath)) {
             throw new RuntimeException('The revision directory "' . $this->revisionPath . '" is not writable');
         }
     }
@@ -360,13 +382,13 @@ class Deployer
     {
         $this->errHandler->start();
 
-        $revisionTarget = $this->revisionPath;
-        $currentLink = $this->deployPath . DIRECTORY_SEPARATOR . 'current';
+        $revisionTarget = realpath($this->revisionPath);
+        $currentLink = $this->deployPath(['current']);
 
         try {
             $this->createSymLink($revisionTarget, $currentLink);
         } catch (Exception $e) {
-            throw new RuntimeException("Could not create current symlink: " . $e->getMessage());
+            throw new RuntimeException('Could not create current symlink: ' . $e->getMessage());
         }
 
         $this->errHandler->stop();
@@ -380,7 +402,7 @@ class Deployer
     final public function pruneOldRevisions($revisionsToKeep)
     {
         if ($revisionsToKeep > 0) {
-            $revisionsDir = $this->deployPath . DIRECTORY_SEPARATOR . $this->directories['revisions'];
+            $revisionsDir = $this->revisionDir;
 
             // Never delete the most recent revision and start index after listing of the last revision we want to keep
             // e.g.
@@ -391,8 +413,9 @@ class Deployer
             $rmIndex = $revisionsToKeep + 2;
 
             // ls 1 directory by time modified | collect all dirs from ${revisionsToKeep} line of output | translate newlines and nulls | remove all those dirs
-            exec("ls -1dtp ${revisionsDir}/** | tail -n +${rmIndex} | tr " . '\'\n\' \'\0\'' . " | xargs -0 rm -rf --",
-                $output, $returnVar);
+            $command = "ls -1dtpc ${revisionsDir}/** | tail -n +${rmIndex} | tr '\\n' '\\0' | xargs -0 rm -rf --";
+
+            exec($command, $output, $returnVar);
 
             if ($returnVar > 0) {
                 throw new RuntimeException('Could not prune old revisions' . $output);
