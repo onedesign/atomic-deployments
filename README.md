@@ -2,6 +2,11 @@
 
 This project is based on the concepts presented in [Buddy Atomic Deployments](https://buddy.works/blog/introducing-atomic-deployments). It provides functionality to handle shared files and directories across deployments. While this was built for use with Buddy, it will work in any standard *nix environment.
 
+
+## How it works
+
+In our typical setup, our deployment pipeline (from [Buddy](https://buddy.works)) deploys into the `deploy-cache` directory before this script is run. This script will then copy all files from the `deploy-cache` and place them into a unique directory within the `revisions` folder. If the `--revision` tag is supplied it will contain that name, if not it defaults to some random bytes. After copy, the script will then symlink the files from the newly created revision directory to a symlink named `current`. This is the folder you should point your webserver to.
+
 ## Dependencies
 
 - PHP 5.5+
