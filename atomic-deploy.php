@@ -370,6 +370,7 @@ class Deployer
         foreach ($symLinks as $target => $linkName) {
             $t = $this->deployPath . DIRECTORY_SEPARATOR . $target;
             $l = $this->revisionPath . DIRECTORY_SEPARATOR . $linkName;
+            printf('Linking %s -> %s', $t, $l);
 
             try {
                 $this->createSymLink($t, $l);
@@ -390,6 +391,7 @@ class Deployer
 
         $revisionTarget = realpath($this->revisionPath);
         $currentLink = $this->deployPath(['current']);
+        printf('Creating link from %s -> %s' . PHP_EOL, $revisionTarget, $currentLink);
 
         try {
             $this->createSymLink($revisionTarget, $currentLink);

@@ -30,7 +30,7 @@ curl -sS https://raw.githubusercontent.com/onedesign/atomic-deployments/master/a
 Add the following in the "SSH Commands" section after your file upload action in your pipeline:
 
 ```
-curl -sS https://raw.githubusercontent.com/onedesign/atomic-deployments/master/atomic-deploy.php | php -- --revision=${execution.to_revision.revision} --symlinks='{"shared/config/.env":".env","shared/storage":"current/storage", "shared/cpresources":"current/web/cpresources"}'
+curl -sS https://raw.githubusercontent.com/onedesign/atomic-deployments/feature/initialize-directories/atomic-deploy.php | php -- --revision=${execution.to_revision.revision} --symlinks='{"shared/config/.env":".env","shared/storage":"storage", "shared/cpresources":"web/cpresources"}'
 ```
 
 ### Buddy + Craft 2 Example
