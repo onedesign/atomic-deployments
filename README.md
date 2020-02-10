@@ -25,6 +25,14 @@ In our typical setup, our deployment pipeline (from [Buddy](https://buddy.works)
 curl -sS https://raw.githubusercontent.com/onedesign/atomic-deployments/master/atomic-deploy.php | php -- --revision=$(date "+%F-%H-%M-%S")
 ```
 
+### Buddy + Craft 3 Example
+
+Add the following in the "SSH Commands" section after your file upload action in your pipeline:
+
+```
+curl -sS https://raw.githubusercontent.com/onedesign/atomic-deployments/master/atomic-deploy.php | php -- --revision=${execution.to_revision.revision} --symlinks='{"shared/config/.env":".env","shared/storage":"current/storage", "shared/cpresources":"current/web/cpresources"}'
+```
+
 ### Buddy + Craft 2 Example
 
 Add the following in the "SSH Commands" section after your file upload action in your pipeline:
