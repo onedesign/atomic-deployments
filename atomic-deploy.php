@@ -23,7 +23,7 @@ function process($argv)
     $deployDir = getOptValue('--deploy-dir', $argv, getcwd());
     $deployCacheDir = getOptValue('--deploy-cache-dir', $argv, 'deploy-cache');
     $revision = getOptValue('--revision', $argv, false);
-    $revisionsToKeep = getOptValue('--revisions-to-keep', $argv, 20);
+    $revisionsToKeep = getOptValue('--revisions-to-keep', $argv, 5);
     $symLinks = getOptValue('--symlinks', $argv, '{}');
 
     if (!checkParams($deployDir, $deployCacheDir, $revision, $revisionsToKeep, $symLinks)) {
