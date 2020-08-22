@@ -366,7 +366,8 @@ class Deployer {
                 $output, $returnVar);
 
             if ($returnVar > 0) {
-                throw new RuntimeException('Could not prune old revisions' . $output);
+                echo 'Could not prune old revisions' . PHP_EOL;
+                print_r($output);
             }
         }
     }
