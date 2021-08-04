@@ -1,10 +1,10 @@
 {
-    "name": "onedesign/deploy",
+    "name": "onedesign/atomic-deploy",
     "description": "A script to easily handle atomic deployments in a Linux environment.",
     "type": "library",
     "version": "0.0.1",
     "bin": [
-        "bin/atomic-deploy"
+        "bin/deploy"
     ],
     "authors": [
         {
