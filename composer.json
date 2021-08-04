@@ -1,5 +1,5 @@
 {
-    "name": "onedesign/atomic-deploy",
+    "name": "onedesign/deploy",
     "description": "A script to easily handle atomic deployments in a Linux environment.",
     "type": "library",
     "version": "0.0.1",
