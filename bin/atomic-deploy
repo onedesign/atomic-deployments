@@ -1,0 +1,21 @@
+#!/usr/bin/env php
+<?php
+
+/*
+ * Register the Autoloader
+ *
+ */
+
+$paths = [
+    __DIR__.'/../vendor/autoload.php', // locally
+    __DIR__.'/../../../autoload.php' // dependency
+];
+
+foreach ($paths as $path) {
+	if (file_exists($path)) {
+		require_once $path;
+		break;
+	}
+}
+$atomicDeploy = new \Onedesign\AtomicDeploy\AtomicDeploy();
+$atomicDeploy->process($argv);

@@ -1,0 +1,20 @@
+{
+    "name": "onedesign/atomic-deploy",
+    "type": "library",
+    "version": "0.0.1",
+    "bin": [
+        "bin/atomic-deploy"
+    ],
+    "autoload": {
+        "psr-4": {
+            "Onedesign\\AtomicDeploy\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Dave Olson",
+            "email": "david.olson@onedesigncompany.com"
+        }
+    ],
+    "require": {}
+}
