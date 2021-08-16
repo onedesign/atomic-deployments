@@ -10,11 +10,18 @@
             "Onedesign\\AtomicDeploy\\": "src/"
         }
     },
+    "autoload-dev": {
+        "psr-4": {
+            "Onedesign\\AtomicTests\\": "tests/"
+        }
+    },
     "authors": [
         {
             "name": "Dave Olson",
             "email": "david.olson@onedesigncompany.com"
         }
     ],
-    "require": {}
+    "require": {
+        "phpunit/phpunit": "^9.5"
+    }
 }

@@ -1,4 +1,4 @@
 /vendor
 /.idea
 .DS_Store
-/test
+/tests/tmp

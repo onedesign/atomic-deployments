@@ -80,27 +80,27 @@ class AtomicDeploy
 		$result = true;
 
 		if (false !== $deployDir && !is_dir($deployDir)) {
-			out("The defined deploy dir ({$deployDir}) does not exist.", 'info');
+			$this->out("The defined deploy dir ({$deployDir}) does not exist.", 'info');
 			$result = false;
 		}
 
 		if (false !== $deployCacheDir && !is_dir($deployCacheDir)) {
-			out("The defined deploy cache dir ({$deployCacheDir}) does not exist.", 'info');
+			$this->out("The defined deploy cache dir ({$deployCacheDir}) does not exist.", 'info');
 			$result = false;
 		}
 
 		if (false === $revision || empty($revision)) {
-			out("A revision must be specified.", 'info');
+			$this->out("A revision must be specified.", 'info');
 			$result = false;
 		}
 
 		if (false !== $revisionsToKeep && (!is_int((integer)$revisionsToKeep) || $revisionsToKeep <= 0)) {
-			out("Number of revisions to keep must be a number greater than zero.", 'info');
+			$this->out("Number of revisions to keep must be a number greater than zero.", 'info');
 			$result = false;
 		}
 
 		if (false !== $symLinks && null === json_decode($symLinks)) {
-			out("Symlinks parameter is not valid JSON.", 'info');
+			$this->out("Symlinks parameter is not valid JSON.", 'info');
 			$result = false;
 		}
 
@@ -130,7 +130,26 @@ class AtomicDeploy
 			);
 		}
 	}
+	public function out($text, $color = null, $newLine = true)
+	{
+		$styles = [
+			'success' => "\033[0;32m%s\033[0m",
+			'error' => "\033[31;31m%s\033[0m",
+			'info' => "\033[33;33m%s\033[0m"
+		];
 
+		$format = "%s";
+
+		if (isset($styles[$color]) && $this->useAnsi) {
+			$format = $styles[$color];
+		}
+
+		if ($newLine) {
+			$format .= PHP_EOL;
+		}
+
+		printf($format, $text);
+	}
 	/**
 	 * displays the help
 	 */

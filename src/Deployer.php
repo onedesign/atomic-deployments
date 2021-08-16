@@ -16,15 +16,19 @@ class Deployer
 	private $useAnsi;
 
 	private $directories = [
-		'revision' => 'revisions',
+		'revisions' => 'revisions',
 		'shared' => 'shared',
 		'config' => 'shared/config'
 	];
 
-	public function __construct($quiet, $useAnsi = true)
+	public function __construct($quiet, $useAnsi = true, $directoryBase = '')
 	{
 		if ($this->quiet = $quiet) {
 			ob_start();
+		}
+
+		foreach ($this->directories as $key => $directory) {
+			$this->directories[$key] = rtrim($directoryBase, '/') . '/' . $directory;
 		}
 
 		$this->useAnsi = $useAnsi;
@@ -104,13 +108,12 @@ class Deployer
 	 */
 	public function createRevisionDir($revision)
 	{
-		$this->revisionPath = $this->deployPath . DIRECTORY_SEPARATOR . $this->directories['revisions'] . DIRECTORY_SEPARATOR . $revision;
+		$this->revisionPath = $this->directories['revisions'] . DIRECTORY_SEPARATOR . $revision;
 		$this->revisionPath = rtrim($this->revisionPath, DIRECTORY_SEPARATOR);
 
 		if (is_dir(realpath($this->revisionPath))) {
 			$this->revisionPath = $this->revisionPath . '-' . time();
 		}
-
 		if (!is_dir($this->revisionPath) && !mkdir($this->revisionPath)) {
 			throw new RuntimeException('Could not create the revision directory "' . $this->revisionPath. '".');
 		}
@@ -124,7 +127,7 @@ class Deployer
 	{
 		$this->errHandler->start();
 
-		exec("cp -a $deployCacheDir/.$this->revisionPath", $output, $returnVar);
+		exec("cp -a $deployCacheDir/. $this->revisionPath", $output, $returnVar);
 
 		if ($returnVar > 0) {
 			throw new RuntimeException('Could not copy deploy cache to revision directory "' . $output . '".');
@@ -142,18 +145,18 @@ class Deployer
 	{
 		$this->errHandler->start();
 
-		foreach($symLinks as $target => $linkName) {
-			$t = $this->deployPath . DIRECTORY_SEPARATOR . $target;
-			$l = $this->revisionPath . DIRECTORY_SEPARATOR . $linkName;
+        foreach($symLinks as $target => $linkName) {
+            $t = $this->deployPath . DIRECTORY_SEPARATOR . $target;
+            $l = $this->revisionPath . DIRECTORY_SEPARATOR . $linkName;
 
-			try {
-				$this->createSymLink($t, $l);
-			} catch (Exception $e) {
-				throw new RuntimeException("Could not create symlink $t -> $l: " . $e->getMessage());
-			}
-		}
+            try {
+                $this->createSymLink($t, $l);
+            } catch (Exception $e) {
+                throw new RuntimeException("Could not create symlink $t -> $l: " . $e->getMessage());
+            }
+        }
 
-		$this->errHandler->stop();
+        $this->errHandler->stop();
 	}
 
 	/**
@@ -167,9 +170,9 @@ class Deployer
 	{
 		exec("rm -rf $linkName && ln -sfn $target $linkName", $output, $returnVar);
 
-		if ($returnVar > 0) {
-			throw new RuntimeException($output);
-		}
+        if ($returnVar > 0) {
+            throw new RuntimeException($output);
+        }
 	}
 
 	/**
@@ -177,7 +180,7 @@ class Deployer
 	 */
 	public function linkCurrentRevision()
 	{
-		$this->errHandler->start();
+//		$this->errHandler->start();
 
 		$revisionTarget = $this->revisionPath;
 		$currentLink = $this->deployPath . DIRECTORY_SEPARATOR . 'current';
