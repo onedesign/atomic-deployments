@@ -6,6 +6,14 @@
     "bin": [
         "bin/deploy"
     ],
+    "autoload": {
+        "classmap": ["atomic-deploy.php"]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "OneDesign\\AtomicTests\\": "tests/"
+        }
+    },
     "authors": [
         {
             "name": "Dave Olson",
@@ -16,5 +24,7 @@
             "email": "brian@onedesigncompany.com"
         }
     ],
-    "require": {}
+    "require": {
+        "phpunit/phpunit": "^9.5"
+    }
 }

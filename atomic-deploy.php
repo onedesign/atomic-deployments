@@ -1,7 +1,11 @@
-<?php
+<?php namespace OneDesign\AtomicDeploy;
 
 /*
  */
+
+if (!isset($argv)) {
+	return;
+}
 
 process(is_array($argv) ? $argv : array());
 
@@ -196,8 +200,11 @@ class Deployer {
      *
      * @param bool $quiet Quiet mode
      */
-    public function __construct($quiet)
+    public function __construct($quiet, $directoryBase = '')
     {
+    	foreach ($this->directories as $key => $directory) {
+    		$this->directories[$key] = $directoryBase . DIRECTORY_SEPARATOR .  $directory;
+	    }
         if (($this->quiet = $quiet)) {
             ob_start();
         }
@@ -276,7 +283,7 @@ class Deployer {
      * @throws RuntimeException If directories can't be created
      */
     public function createRevisionDir($revision) {
-        $this->revisionPath = $this->deployPath . DIRECTORY_SEPARATOR . $this->directories['revisions']. DIRECTORY_SEPARATOR . $revision;
+        $this->revisionPath = $this->directories['revisions']. DIRECTORY_SEPARATOR . $revision;
         $this->revisionPath = rtrim($this->revisionPath, DIRECTORY_SEPARATOR);
 
         // Check to see if this revision was already deployed
@@ -351,7 +358,7 @@ class Deployer {
      */
     public function pruneOldRevisions($revisionsToKeep) {
         if ($revisionsToKeep > 0) {
-            $revisionsDir = $this->deployPath . DIRECTORY_SEPARATOR . $this->directories['revisions'];
+            $revisionsDir = $this->directories['revisions'];
 
             // Never delete the most recent revision and start index after listing of the last revision we want to keep
             // e.g.
