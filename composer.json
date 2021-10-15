@@ -16,5 +16,10 @@
             "email": "brian@onedesigncompany.com"
         }
     ],
-    "require": {}
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "onedesign\\atomicdeploy\\": "includes/"
+        }
+    }
 }

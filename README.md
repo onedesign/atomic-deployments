@@ -69,13 +69,17 @@ rm -rf revisions/<revision_id>/logs \
   && ln -sfn <deploy-dir>/shared/logs revisions/<revision>/logs
 ```
 
+## Password Protection
+By default, the deployment will password protect any site that is served from a *.oneis.us domain name. This works by prepending the contents of the `templates/htaccess-auth.txt` file to any existing `.htaccess` file found in the `current/web` directory. If an `.htaccess` file does not exist within that directory, one will be generated using the `templates/htaccess.txt` file.
+
 
 ## Testing
 
 ```bash
 cd ./test
-php ../atomic-deploy.php \
-  --deploy-cache-dir="./deploy-cache" \
+php ./bin/deploy \
+  --deploy-cache-dir="./test/deploy-cache" \
+  --deploy-dir="./test" \
   --revision="123456" \
   --symlinks='{"shared/config/env":".env","shared/storage":"storage"}'
 ```

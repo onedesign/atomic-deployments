@@ -1,5 +1,13 @@
 <?php
 
+use onedesign\atomicdeploy\PasswordProtect;
+
+require_once __DIR__ . '/vendor/autoload.php';
+
+if (!defined('TEMPLATE_DIR')) {
+    define('TEMPLATE_DIR', __DIR__ . '/templates');
+}
+
 /*
  */
 
@@ -26,12 +34,18 @@ function process($argv)
     $revisionsToKeep = getOptValue('--revisions-to-keep', $argv, 5);
     $symLinks = getOptValue('--symlinks', $argv, '{}');
 
+    // If $deployDir isn't an absolute path, make it one
+    if (substr($deployDir, 0, 1) !== '/') {
+        $deployDir = realpath(getcwd() . DIRECTORY_SEPARATOR . $deployDir);
+    }
+
     if (!checkParams($deployDir, $deployCacheDir, $revision, $revisionsToKeep, $symLinks)) {
         exit(1);
     }
 
     $deployer = new Deployer($quiet);
     if ($deployer->run($deployDir, $deployCacheDir, $revision, $revisionsToKeep, json_decode($symLinks))) {
+        $deployer->postDeploy();
         exit(0);
     }
 
@@ -206,9 +220,25 @@ class Deployer
     }
 
     /**
-     *
+     *Tasks to run after deploy
      */
-    public function run($deployDir, $deployCacheDir, $revision, $revisionsToKeep, $symLinks)
+    public function postDeploy()
+    {
+        PasswordProtect::generateHtaccessFile($this->deployPath,);
+    }
+
+    /**
+     * Run the deployment
+     *
+     * @param string $deployDir Deploy directory path
+     * @param string $deployCacheDir Deploy cache directory path
+     * @param string $revision Revision name
+     * @param int $revisionsToKeep How many revisions to keep
+     * @param object $symLinks Object containing symlinks to create
+     * @return bool Was the deploy successful?
+     * @throws Exception
+     */
+    public function run(string $deployDir, string $deployCacheDir, string $revision, int $revisionsToKeep, object $symLinks): bool
     {
         try {
             out('Creating atomic deployment directories...');
@@ -248,13 +278,14 @@ class Deployer
     }
 
     /**
-     * [initDirectories description]
+     * Initialize directories needed for deployment
+     *
      *
      * @param string $deployDir Base deployment directory
      * @return void
      * @throws RuntimeException If the deploy directory is not writable or dirs can't be created
      */
-    public function initDirectories($deployDir)
+    public function initDirectories(string $deployDir)
     {
         $this->deployPath = (is_dir($deployDir) ? rtrim($deployDir, '/') : '');
 
@@ -389,6 +420,7 @@ class Deployer
      */
     protected function createSymLink($target, $linkName)
     {
+        echo "  > Linking $target to $linkName ..." . PHP_EOL;
         exec("rm -rf $linkName && ln -sfn $target $linkName", $output, $returnVar);
 
         if ($returnVar > 0) {
