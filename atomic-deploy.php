@@ -2,8 +2,6 @@
 
 use onedesign\atomicdeploy\PasswordProtect;
 
-require __DIR__ . '/vendor/autoload.php';
-
 if (!defined('TEMPLATE_DIR')) {
     define('TEMPLATE_DIR', __DIR__ . '/templates');
 }
