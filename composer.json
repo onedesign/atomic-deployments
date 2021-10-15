@@ -17,6 +17,11 @@
         }
     ],
     "require": {},
+    "autoload": {
+        "psr-4": {
+            "onedesign\\atomicdeploy\\": "includes/"
+        }
+    },
     "config": {
         "sort-packages": true,
         "optimize-autoloader": true,
