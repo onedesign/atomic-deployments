@@ -76,10 +76,5 @@ By default, the deployment will password protect any site that is served from a 
 ## Testing
 
 ```bash
-cd ./test
-php ./bin/deploy \
-  --deploy-cache-dir="./test/deploy-cache" \
-  --deploy-dir="./test" \
-  --revision="123456" \
-  --symlinks='{"shared/config/env":".env","shared/storage":"storage"}'
+php ./test.php
 ```

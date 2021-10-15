@@ -31,8 +31,15 @@ class PasswordProtect
         $authContents = @file_get_contents(TEMPLATE_DIR . '/htaccess-auth.txt');
         $authContents = str_replace('%{AUTH_FILE_PATH}', $htpasswdPath, $authContents);
 
+
         // If the project doesn't have an .htaccess file, create one from the template
         if (!file_exists($outputPath)) {
+
+            // Need to make sure the `current/web` directory is here, otherwise PHP will fail to create the .htaccess file
+            if (!is_dir($deployDir . '/current/web') && !mkdir($deployDir . '/current/web')) {
+                throw new RuntimeException('No current/web directory exists, and could not create it.');
+            }
+
             $htaccessFileContents = @file_get_contents(TEMPLATE_DIR . '/htaccess.txt');
         } else {
             $htaccessFileContents = @file_get_contents($outputPath);
