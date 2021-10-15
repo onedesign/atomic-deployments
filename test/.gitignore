@@ -1,2 +1,5 @@
-releases/*
-current
+*
+!.gitignore
+
+!deploy-cache
+!shared
