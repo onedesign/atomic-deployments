@@ -1,5 +1,9 @@
 <?php
 
+if (!defined('TEMPLATE_DIR')) {
+    define('TEMPLATE_DIR', __DIR__ . '/templates');
+}
+
 /*
  */
 
@@ -32,6 +36,7 @@ function process($argv)
 
     $deployer = new Deployer($quiet);
     if ($deployer->run($deployDir, $deployCacheDir, $revision, $revisionsToKeep, json_decode($symLinks))) {
+        $deployer->postDeploy();
         exit(0);
     }
 
@@ -206,7 +211,14 @@ class Deployer
     }
 
     /**
-     *
+     * Run commands post deploy
+     */
+    public function postDeploy() {
+        PasswordProtect::generateHtaccessFile($this->deployPath);
+    }
+
+    /**
+     * Run the script
      */
     public function run($deployDir, $deployCacheDir, $revision, $revisionsToKeep, $symLinks)
     {
@@ -483,5 +495,78 @@ class ErrorHandler
             restore_error_handler();
             $this->active = false;
         }
+    }
+}
+
+/**
+ * @author    One Design Company
+ * @package   atomic-deployments
+ * @since     1.1.0
+ */
+class PasswordProtect
+{
+    /**
+     * Generate the .htaccess file
+     *
+     * @param string $deployDir Path to the deploy directory
+     * @return bool
+     */
+    public static function generateHtaccessFile(string $deployDir): bool
+    {
+        $htpasswdPath = self::writeHtpasswdFile($deployDir);
+        $outputPath = $deployDir . '/current/web/.htaccess';
+
+        $authContents = @file_get_contents(TEMPLATE_DIR . '/htaccess-auth.txt');
+        $authContents = str_replace('%{AUTH_FILE_PATH}', $htpasswdPath, $authContents);
+
+
+        // If the project doesn't have an .htaccess file, create one from the template
+        if (!file_exists($outputPath)) {
+
+            // Need to make sure the `current/web` directory is here, otherwise PHP will fail to create the .htaccess file
+            if (!is_dir($deployDir . '/current/web') && !mkdir($deployDir . '/current/web')) {
+                throw new RuntimeException('No current/web directory exists, and could not create it.');
+            }
+
+            $htaccessFileContents = @file_get_contents(TEMPLATE_DIR . '/htaccess.txt');
+        } else {
+            $htaccessFileContents = @file_get_contents($outputPath);
+        }
+
+        $resource = fopen($outputPath, 'w');
+        fwrite($resource, $authContents . PHP_EOL . $htaccessFileContents);
+        return fclose($resource);
+    }
+
+    /**
+     * Generate the auth string to output in the .htpasswd file
+     *
+     * @return string Auth string
+     */
+    public static function generateAuthString(): string
+    {
+        $username = 'onedesign';
+        $password = 'oneisus';
+
+        $encrypted_password = crypt($password, base64_encode($password));
+        return $username . ':' . $encrypted_password;
+    }
+
+    /**
+     * Write the .htpasswd file to the DEPLOY_DIR
+     *
+     * @param string $deployDir Deploy directory
+     * @return string Path to the .htpasswd file
+     */
+    public static function writeHtpasswdFile(string $deployDir): string
+    {
+        $authString = self::generateAuthString();
+        $htpasswdPath = $deployDir . '/.htpasswd';
+
+        $htpasswdFile = fopen($htpasswdPath, 'w');
+        fwrite($htpasswdFile, $authString);
+        fclose($htpasswdFile);
+
+        return $htpasswdPath;
     }
 }

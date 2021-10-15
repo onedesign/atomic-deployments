@@ -1,0 +1,64 @@
+# ----------------------------------------------------------------------
+# Rewrites
+# ----------------------------------------------------------------------
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # This sets the environment variable HTTPS to "on"
+    # if the request is behind a load balancer which terminates SSL.
+    # In PHP, you can access this via $_SERVER['HTTPS']
+    SetEnvIf X-Forwarded-Proto https HTTPS=on
+
+    # Force redirect to HTTPS
+    # Uncomment the rules below to enable. If hosting on Cloudways, these rules do not need to be enabled: https://support.cloudways.com/redirect-http-to-https/
+    # RewriteCond %{HTTPS} off
+    # RewriteCond %{HTTP:X-Forwarded-Proto} !https [NC]
+    # RewriteCond %{HTTP_HOST} ^www.example.com [NC,OR]
+    # RewriteCond %{HTTP_HOST} ^.+\.oneis.us [NC]
+    # RewriteRule .* https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+
+    # Redirect non-www to www
+    # Uncomment the rules below to enable
+    # RewriteCond %{HTTP_HOST} ^example.com [NC]
+    # RewriteRule ^(.*)$ https://www.example.com/$1 [L,R=301,NC]
+
+    # Strip trailing slashes from the end of URLs. Redirect them to non-slash versions.
+    # This ignores the trailing slash on the base URL (e.g. https://www.example.com/)
+    RewriteCond %{REQUEST_URI} ^.+\/$
+    RewriteRule ^(.+)\/$ /$1 [L,R=301,NC]
+
+    # Blitz cache rewrite
+    # https://putyourlightson.com/craft-plugins/blitz/docs#/?id=server-rewrites
+    RewriteCond %{DOCUMENT_ROOT}/cache/blitz/%{HTTP_HOST}/%{REQUEST_URI}/%{QUERY_STRING}/index.html -s
+    RewriteCond %{REQUEST_METHOD} GET
+    # Required as of version 2.1.0
+    RewriteCond %{QUERY_STRING} !token= [NC]
+    RewriteRule .* /cache/blitz/%{HTTP_HOST}/%{REQUEST_URI}/%{QUERY_STRING}/index.html [L]
+
+    # Send would-be 404 requests to Craft
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_URI} !^/(favicon\.ico|apple-touch-icon.*\.png)$ [NC]
+    RewriteRule (.+) index.php?p=$1 [QSA,L]
+</IfModule>
+
+# ----------------------------------------------------------------------
+# Security headers
+# ----------------------------------------------------------------------
+<IfModule mod_headers.c>
+
+  # Stop pages from loading when they detect XSS attacks
+  Header set X-XSS-Protection "1; mode=block"
+
+  # Disable the ablity to render a page on this website in a '<frame>', '<iframe>' or '<object>'
+  Header set X-Frame-Options "SAMEORIGIN"
+
+  # Enable HSTS, which instructs clients to only connect to a website over encrypted HTTPS connections
+  Header set Strict-Transport-Security "max-age=31536000" env=HTTPS
+
+  # Protect against content-sniffing, page-framing and click-jacking, xss attacks
+  # https://htaccessbook.com/increase-security-x-security-headers/
+  Header set X-XSS-Protection "1; mode=block"
+  Header always append X-Frame-Options SAMEORIGIN
+  Header set X-Content-Type-Options nosniff
+</IfModule>
