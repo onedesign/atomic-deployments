@@ -69,6 +69,8 @@ rm -rf revisions/<revision_id>/logs \
   && ln -sfn <deploy-dir>/shared/logs revisions/<revision>/logs
 ```
 
+## Password Protection
+By default, the deployment will password protect any site that is served from a *.oneis.us domain name. This works by prepending the contents of the `templates/htaccess-auth.txt` file to any existing `.htaccess` file found in the `current/web` directory. If an `.htaccess` file does not exist within that directory, one will be generated using the `templates/htaccess.txt` file.
 
 ## Testing
 
