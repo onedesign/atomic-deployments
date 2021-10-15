@@ -74,7 +74,7 @@ rm -rf revisions/<revision_id>/logs \
 
 ```bash
 cd ./test
-php ../atomic-deploy.php \
+php ../bin/deploy \
   --deploy-cache-dir="./deploy-cache" \
   --revision="123456" \
   --symlinks='{"shared/config/env":".env","shared/storage":"storage"}'
