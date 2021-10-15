@@ -222,7 +222,7 @@ class Deployer
      */
     public function postDeploy()
     {
-        PasswordProtect::generateHtaccessFile($this->deployPath,);
+        PasswordProtect::generateHtaccessFile($this->deployPath);
     }
 
     /**
