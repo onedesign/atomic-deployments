@@ -1,9 +1,13 @@
 <?php
 
+if (!defined('TEMPLATE_DIR')) {
+    define('TEMPLATE_DIR', __DIR__ . '/templates');
+}
+
 /*
  */
 
-process(is_array($argv) ? $argv : array());
+process(is_array($argv) ? $argv : []);
 
 /**
  * processes the installer
@@ -18,8 +22,8 @@ function process($argv)
         exit(0);
     }
 
-    $help       = in_array('--help', $argv);
-    $quiet      = in_array('--quiet', $argv);
+    $help = in_array('--help', $argv);
+    $quiet = in_array('--quiet', $argv);
     $deployDir = getOptValue('--deploy-dir', $argv, getcwd());
     $deployCacheDir = getOptValue('--deploy-cache-dir', $argv, 'deploy-cache');
     $revision = getOptValue('--revision', $argv, false);
@@ -32,6 +36,7 @@ function process($argv)
 
     $deployer = new Deployer($quiet);
     if ($deployer->run($deployDir, $deployCacheDir, $revision, $revisionsToKeep, json_decode($symLinks))) {
+        $deployer->postDeploy();
         exit(0);
     }
 
@@ -118,7 +123,7 @@ function getOptValue($opt, $argv, $default)
  * @param mixed $deployDir The required deployment directory
  * @param mixed $deployCacheDir The required deployment cache directory
  * @param mixed $revision A unique ID for this revision
- * @param mixed $revisionsToKeep The number of revisions to keep after deploying 
+ * @param mixed $revisionsToKeep The number of revisions to keep after deploying
  *
  * @return bool True if the supplied params are okay
  */
@@ -159,11 +164,11 @@ function checkParams($deployDir, $deployCacheDir, $revision, $revisionsToKeep, $
  */
 function out($text, $color = null, $newLine = true)
 {
-    $styles = array(
+    $styles = [
         'success' => "\033[0;32m%s\033[0m",
         'error' => "\033[31;31m%s\033[0m",
         'info' => "\033[33;33m%s\033[0m"
-    );
+    ];
 
     $format = '%s';
 
@@ -178,18 +183,19 @@ function out($text, $color = null, $newLine = true)
     printf($format, $text);
 }
 
-class Deployer {
+class Deployer
+{
 
     private $quiet;
     private $deployPath;
     private $revisionPath;
     private $errHandler;
 
-    private $directories = array(
+    private $directories = [
         'revisions' => 'revisions',
         'shared' => 'shared',
         'config' => 'shared/config',
-        );
+    ];
 
     /**
      * Constructor - must not do anything that throws an exception
@@ -205,9 +211,17 @@ class Deployer {
     }
 
     /**
-     * 
+     * Run commands post deploy
      */
-    public function run($deployDir, $deployCacheDir, $revision, $revisionsToKeep, $symLinks) {
+    public function postDeploy() {
+        PasswordProtect::generateHtaccessFile($this->deployPath);
+    }
+
+    /**
+     * Run the script
+     */
+    public function run($deployDir, $deployCacheDir, $revision, $revisionsToKeep, $symLinks)
+    {
         try {
             out('Creating atomic deployment directories...');
             $this->initDirectories($deployDir);
@@ -242,20 +256,22 @@ class Deployer {
             }
             out($e->getMessage(), 'error');
         }
-        return $result;   
+        return $result;
     }
 
     /**
      * [initDirectories description]
-     * @param  string $deployDir Base deployment directory
+     *
+     * @param string $deployDir Base deployment directory
      * @return void
      * @throws RuntimeException If the deploy directory is not writable or dirs can't be created
      */
-    public function initDirectories($deployDir) {
+    public function initDirectories($deployDir)
+    {
         $this->deployPath = (is_dir($deployDir) ? rtrim($deployDir, '/') : '');
 
         if (!is_writeable($deployDir)) {
-            throw new RuntimeException('The deploy directory "'.$deployDir.'" is not writable');
+            throw new RuntimeException('The deploy directory "' . $deployDir . '" is not writable');
         }
 
         if (!is_dir($this->directories['revisions']) && !mkdir($this->directories['revisions'])) {
@@ -273,10 +289,12 @@ class Deployer {
 
     /**
      * Creates a revision directory under the revisions/ directory
+     *
      * @throws RuntimeException If directories can't be created
      */
-    public function createRevisionDir($revision) {
-        $this->revisionPath = $this->deployPath . DIRECTORY_SEPARATOR . $this->directories['revisions']. DIRECTORY_SEPARATOR . $revision;
+    public function createRevisionDir($revision)
+    {
+        $this->revisionPath = $this->deployPath . DIRECTORY_SEPARATOR . $this->directories['revisions'] . DIRECTORY_SEPARATOR . $revision;
         $this->revisionPath = rtrim($this->revisionPath, DIRECTORY_SEPARATOR);
 
         // Check to see if this revision was already deployed
@@ -289,20 +307,21 @@ class Deployer {
         }
 
         if (!is_writeable($this->revisionPath)) {
-            throw new RuntimeException('The revision directory "'.$this->revisionPath.'" is not writable');
+            throw new RuntimeException('The revision directory "' . $this->revisionPath . '" is not writable');
         }
     }
 
     /**
      * Copies the deploy-cache to the revision directory
      */
-    public function copyCacheToRevision($deployCacheDir) {
+    public function copyCacheToRevision($deployCacheDir)
+    {
         $this->errHandler->start();
 
         exec("cp -a $deployCacheDir/. $this->revisionPath", $output, $returnVar);
 
         if ($returnVar > 0) {
-            throw new RuntimeException('Could not copy deploy cache to revision directory: ' . $output); 
+            throw new RuntimeException('Could not copy deploy cache to revision directory: ' . $output);
         }
 
         $this->errHandler->stop();
@@ -311,10 +330,11 @@ class Deployer {
     /**
      * Creates defined symbolic links
      */
-    public function createSymLinks($symLinks) {
+    public function createSymLinks($symLinks)
+    {
         $this->errHandler->start();
 
-        foreach($symLinks as $target => $linkName) {
+        foreach ($symLinks as $target => $linkName) {
             $t = $this->deployPath . DIRECTORY_SEPARATOR . $target;
             $l = $this->revisionPath . DIRECTORY_SEPARATOR . $linkName;
 
@@ -331,7 +351,8 @@ class Deployer {
     /**
      * Sets the deployed revision as `current`
      */
-    public function linkCurrentRevision() {
+    public function linkCurrentRevision()
+    {
         $this->errHandler->start();
 
         $revisionTarget = $this->revisionPath;
@@ -341,7 +362,7 @@ class Deployer {
             $this->createSymLink($revisionTarget, $currentLink);
         } catch (Exception $e) {
             throw new RuntimeException("Could not create current symlink: " . $e->getMessage());
-        } 
+        }
 
         $this->errHandler->stop();
     }
@@ -349,7 +370,8 @@ class Deployer {
     /**
      * Removes old revision directories
      */
-    public function pruneOldRevisions($revisionsToKeep) {
+    public function pruneOldRevisions($revisionsToKeep)
+    {
         if ($revisionsToKeep > 0) {
             $revisionsDir = $this->deployPath . DIRECTORY_SEPARATOR . $this->directories['revisions'];
 
@@ -362,7 +384,7 @@ class Deployer {
             $rmIndex = $revisionsToKeep + 2;
 
             // ls 1 directory by time modified | collect all dirs from ${revisionsToKeep} line of output | translate newlines and nulls | remove all those dirs
-            exec("ls -1dtp ${revisionsDir}/** | tail -n +${rmIndex} | tr " . '\'\n\' \'\0\'' ." | xargs -0 rm -rf --",
+            exec("ls -1dtp ${revisionsDir}/** | tail -n +${rmIndex} | tr " . '\'\n\' \'\0\'' . " | xargs -0 rm -rf --",
                 $output, $returnVar);
 
             if ($returnVar > 0) {
@@ -374,7 +396,8 @@ class Deployer {
     /**
      * Uses the system method `ln` to create a symlink
      */
-    protected function createSymLink($target, $linkName) {
+    protected function createSymLink($target, $linkName)
+    {
         exec("rm -rf $linkName && ln -sfn $target $linkName", $output, $returnVar);
 
         if ($returnVar > 0) {
@@ -406,7 +429,7 @@ class Deployer {
     protected function outputErrors()
     {
         $errors = explode(PHP_EOL, ob_get_clean());
-        $shown = array();
+        $shown = [];
 
         foreach ($errors as $error) {
             if ($error && !in_array($error, $shown)) {
@@ -455,7 +478,7 @@ class ErrorHandler
     public function start()
     {
         if (!$this->active) {
-            set_error_handler(array($this, 'handleError'));
+            set_error_handler([$this, 'handleError']);
             $this->active = true;
         }
         $this->message = '';
@@ -472,5 +495,78 @@ class ErrorHandler
             restore_error_handler();
             $this->active = false;
         }
+    }
+}
+
+/**
+ * @author    One Design Company
+ * @package   atomic-deployments
+ * @since     1.1.0
+ */
+class PasswordProtect
+{
+    /**
+     * Generate the .htaccess file
+     *
+     * @param string $deployDir Path to the deploy directory
+     * @return bool
+     */
+    public static function generateHtaccessFile(string $deployDir): bool
+    {
+        $htpasswdPath = self::writeHtpasswdFile($deployDir);
+        $outputPath = $deployDir . '/current/web/.htaccess';
+
+        $authContents = @file_get_contents(TEMPLATE_DIR . '/htaccess-auth.txt');
+        $authContents = str_replace('%{AUTH_FILE_PATH}', $htpasswdPath, $authContents);
+
+
+        // If the project doesn't have an .htaccess file, create one from the template
+        if (!file_exists($outputPath)) {
+
+            // Need to make sure the `current/web` directory is here, otherwise PHP will fail to create the .htaccess file
+            if (!is_dir($deployDir . '/current/web') && !mkdir($deployDir . '/current/web')) {
+                throw new RuntimeException('No current/web directory exists, and could not create it.');
+            }
+
+            $htaccessFileContents = @file_get_contents(TEMPLATE_DIR . '/htaccess.txt');
+        } else {
+            $htaccessFileContents = @file_get_contents($outputPath);
+        }
+
+        $resource = fopen($outputPath, 'w');
+        fwrite($resource, $authContents . PHP_EOL . $htaccessFileContents);
+        return fclose($resource);
+    }
+
+    /**
+     * Generate the auth string to output in the .htpasswd file
+     *
+     * @return string Auth string
+     */
+    public static function generateAuthString(): string
+    {
+        $username = 'onedesign';
+        $password = 'oneisus';
+
+        $encrypted_password = crypt($password, base64_encode($password));
+        return $username . ':' . $encrypted_password;
+    }
+
+    /**
+     * Write the .htpasswd file to the DEPLOY_DIR
+     *
+     * @param string $deployDir Deploy directory
+     * @return string Path to the .htpasswd file
+     */
+    public static function writeHtpasswdFile(string $deployDir): string
+    {
+        $authString = self::generateAuthString();
+        $htpasswdPath = $deployDir . '/.htpasswd';
+
+        $htpasswdFile = fopen($htpasswdPath, 'w');
+        fwrite($htpasswdFile, $authString);
+        fclose($htpasswdFile);
+
+        return $htpasswdPath;
     }
 }

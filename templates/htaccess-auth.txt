@@ -1,0 +1,38 @@
+# ----------------------------------------------------------------------
+# AUTH
+# ----------------------------------------------------------------------
+
+# Begin Auth stuff: https://stackoverflow.com/questions/1359472/use-http-auth-only-if-accessing-a-specific-domain
+# Require a username & password if we're on a *.oneis.us domain
+SetEnvIfNoCase Host oneis\.us$ require_auth=true
+
+AuthUserFile %{AUTH_FILE_PATH}
+AuthName "Password Protected"
+AuthType Basic
+
+Order Deny,Allow
+Deny from all
+Satisfy any
+Require valid-user
+Allow from env=!require_auth
+
+# Allow siteimprove IPs
+Allow from 93.160.60.22
+Allow from 185.229.144.22
+Allow from 80.62.246.50
+Allow from 52.48.230.149
+Allow from 52.57.25.76
+Allow from 3.10.81.130
+Allow from 35.157.236.87
+Allow from 35.157.42.7
+Allow from 52.55.30.145
+Allow from 52.20.183.91
+Allow from 52.60.34.56
+Allow from 185.229.144.10
+Allow from 52.7.141.1
+Allow from 52.4.143.42
+Allow from 52.64.209.168
+Allow from 52.47.166.84
+Allow from 35.204.24.17
+Allow from 52.199.41.160
+Allow from 35.156.240.123
