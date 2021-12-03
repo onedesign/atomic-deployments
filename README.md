@@ -39,6 +39,7 @@ curl -sS https://raw.githubusercontent.com/onedesign/atomic-deployments/master/a
 - `--ansi` forces ANSI color output
 - `--no-ansi` disables ANSI color output
 - `--quiet` supresses unimportant messages
+- `--protect` Password protect sites at .oneis.us (default: `true`)
 
 #### Symlinks
 
