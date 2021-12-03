@@ -29,7 +29,7 @@ function process($argv)
     $revision = getOptValue('--revision', $argv, false);
     $revisionsToKeep = getOptValue('--revisions-to-keep', $argv, 5);
     $symLinks = getOptValue('--symlinks', $argv, '{}');
-    $protect = getOptValue('--protect', $argv, 'true') === 'false';
+    $protect = getOptValue('--protect', $argv, 'true') === 'true';
 
     if (!checkParams($deployDir, $deployCacheDir, $revision, $revisionsToKeep, $symLinks)) {
         exit(1);
