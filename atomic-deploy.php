@@ -29,6 +29,7 @@ function process($argv)
     $revision = getOptValue('--revision', $argv, false);
     $revisionsToKeep = getOptValue('--revisions-to-keep', $argv, 5);
     $symLinks = getOptValue('--symlinks', $argv, '{}');
+    $protect = getOptValue('--protect', $argv, true);
 
     if (!checkParams($deployDir, $deployCacheDir, $revision, $revisionsToKeep, $symLinks)) {
         exit(1);
@@ -36,7 +37,7 @@ function process($argv)
 
     $deployer = new Deployer($quiet);
     if ($deployer->run($deployDir, $deployCacheDir, $revision, $revisionsToKeep, json_decode($symLinks))) {
-        $deployer->postDeploy();
+        $deployer->postDeploy($protect);
         exit(0);
     }
 
@@ -213,8 +214,11 @@ class Deployer
     /**
      * Run commands post deploy
      */
-    public function postDeploy() {
-        PasswordProtect::generateHtaccessFile($this->deployPath);
+    public function postDeploy($protect = true)
+    {
+        if ($protect) {
+            PasswordProtect::generateHtaccessFile($this->deployPath);
+        }
     }
 
     /**
