@@ -29,7 +29,7 @@ function process($argv)
     $revision = getOptValue('--revision', $argv, false);
     $revisionsToKeep = getOptValue('--revisions-to-keep', $argv, 5);
     $symLinks = getOptValue('--symlinks', $argv, '{}');
-    $protect = getOptValue('--protect', $argv, true);
+    $protect = getOptValue('--protect', $argv, 'true') === 'false';
 
     if (!checkParams($deployDir, $deployCacheDir, $revision, $revisionsToKeep, $symLinks)) {
         exit(1);
@@ -218,6 +218,8 @@ class Deployer
     {
         if ($protect) {
             PasswordProtect::generateHtaccessFile($this->deployPath);
+        } else {
+            out('WARNING: Password protection disabled');
         }
     }
 
@@ -517,6 +519,7 @@ class PasswordProtect
      */
     public static function generateHtaccessFile(string $deployDir): bool
     {
+        out('Enabling password protection ...');
         $htpasswdPath = self::writeHtpasswdFile($deployDir);
         $outputPath = $deployDir . '/current/web/.htaccess';
 
@@ -526,7 +529,6 @@ class PasswordProtect
 
         // If the project doesn't have an .htaccess file, create one from the template
         if (!file_exists($outputPath)) {
-
             // Need to make sure the `current/web` directory is here, otherwise PHP will fail to create the .htaccess file
             if (!is_dir($deployDir . '/current/web') && !mkdir($deployDir . '/current/web')) {
                 throw new RuntimeException('No current/web directory exists, and could not create it.');
