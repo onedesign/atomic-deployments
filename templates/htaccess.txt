@@ -61,4 +61,9 @@
   Header set X-XSS-Protection "1; mode=block"
   Header always append X-Frame-Options SAMEORIGIN
   Header set X-Content-Type-Options nosniff
+  
+  # Allow special headers for blitz CORs requests
+  # Honestly, not sure why we need this, but from time to time dynamic Blitz requests fail without it.
+  Header add Access-Control-Allow-Headers "x-requested-with"
+  Header add Access-Control-Allow-Methods "GET, OPTIONS"
 </IfModule>
