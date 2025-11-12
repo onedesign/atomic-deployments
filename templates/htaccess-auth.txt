@@ -5,6 +5,8 @@
 # Begin Auth stuff: https://stackoverflow.com/questions/1359472/use-http-auth-only-if-accessing-a-specific-domain
 # Require a username & password if we're on a *.oneis.us domain
 SetEnvIfNoCase Host oneis\.us$ require_auth=true
+# Require a username & password for /admin path on all domains
+SetEnvIf Request_URI "^/admin" require_auth=true
 
 AuthUserFile %{AUTH_FILE_PATH}
 AuthName "Password Protected"
