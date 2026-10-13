@@ -324,10 +324,10 @@ class Deployer
     {
         $this->errHandler->start();
 
-        exec("cp -a $deployCacheDir/. $this->revisionPath", $output, $returnVar);
+        exec("cp -a $deployCacheDir/. $this->revisionPath 2>&1", $output, $returnVar);
 
         if ($returnVar > 0) {
-            throw new RuntimeException('Could not copy deploy cache to revision directory: ' . $output);
+            throw new RuntimeException('Could not copy deploy cache to revision directory: ' . implode(PHP_EOL, $output));
         }
 
         $this->errHandler->stop();
@@ -404,10 +404,10 @@ class Deployer
      */
     protected function createSymLink($target, $linkName)
     {
-        exec("rm -rf $linkName && ln -sfn $target $linkName", $output, $returnVar);
+        exec("rm -rf $linkName && ln -sfn $target $linkName 2>&1", $output, $returnVar);
 
         if ($returnVar > 0) {
-            throw new RuntimeException($output);
+            throw new RuntimeException(implode(PHP_EOL, $output));
         }
     }
 
